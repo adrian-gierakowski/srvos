@@ -88,6 +88,7 @@ in
             "runnerGroup"
             "extraLabels"
             "ephemeral"
+            "workDir"
           ] cfg;
           newConfigPath = builtins.toFile "${svcName}-config.json" (builtins.toJSON runnerRegistrationConfig);
           currentConfigPath = "$STATE_DIRECTORY/.nixos-current-config.json";
@@ -200,7 +201,7 @@ in
               args=(
                 --unattended
                 --disableupdate
-                --work "$RUNTIME_DIRECTORY"
+                --work "${if cfg.workDir != null then cfg.workDir else "$RUNTIME_DIRECTORY"}"
                 --url ${escapeShellArg cfg.url}
                 --labels ${escapeShellArg (concatStringsSep "," cfg.extraLabels)}
                 --name ${escapeShellArg cfg.name}
@@ -342,6 +343,8 @@ in
         "AF_UNIX"
         "AF_NETLINK"
       ];
+
+      ReadWritePaths = lib.optional (cfg.workDir != null) "-${cfg.workDir}";
 
       # Needs network access
       PrivateNetwork = false;
