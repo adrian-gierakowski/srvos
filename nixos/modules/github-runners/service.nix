@@ -241,7 +241,7 @@ in
             # We need to ensure that it exists and is writable by the runner user.
             # Since the runner user is dynamic, we need to chown the directory to the current user.
             mkdir -p ${escapeShellArg cfg.workDir}
-            chown "$USER:$GROUP" ${escapeShellArg cfg.workDir}
+            chown ${escapeShellArg (if cfg.user != null then cfg.user else svcName)} ${escapeShellArg cfg.workDir}
             chmod 700 ${escapeShellArg cfg.workDir}
           '';
         in
