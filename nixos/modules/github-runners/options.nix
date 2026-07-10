@@ -179,6 +179,19 @@ with lib;
     defaultText = literalExpression "pkgs.github-runner";
   };
 
+  workDir = mkOption {
+    type = types.nullOr types.str;
+    description = ''
+      Working directory for the runner.
+
+      If null, defaults to the runtime directory (usually /run/github-runner/name).
+      If set, you must ensure the directory exists and is writable by the service user.
+      You can use `serviceOverrides.StateDirectory` to let systemd manage a directory in /var/lib.
+    '';
+    default = null;
+    example = "/var/lib/github-runner/work";
+  };
+
   ephemeral = mkOption {
     type = types.bool;
     description = ''

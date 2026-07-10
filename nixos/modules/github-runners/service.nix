@@ -88,6 +88,7 @@ in
             "runnerGroup"
             "extraLabels"
             "ephemeral"
+            "workDir"
           ] cfg;
           newConfigPath = builtins.toFile "${svcName}-config.json" (builtins.toJSON runnerRegistrationConfig);
           currentConfigPath = "$STATE_DIRECTORY/.nixos-current-config.json";
@@ -200,7 +201,7 @@ in
               args=(
                 --unattended
                 --disableupdate
-                --work "$RUNTIME_DIRECTORY"
+                --work "${if cfg.workDir != null then cfg.workDir else "$RUNTIME_DIRECTORY"}"
                 --url ${escapeShellArg cfg.url}
                 --labels ${escapeShellArg (concatStringsSep "," cfg.extraLabels)}
                 --name ${escapeShellArg cfg.name}
@@ -234,6 +235,15 @@ in
             # Link the runner credentials to the runtime dir
             ln -s "$STATE_DIRECTORY"/{${lib.concatStringsSep "," runnerCredFiles}} "$RUNTIME_DIRECTORY/"
           '';
+
+          setupWorkDir = writeScript "setup-work-dir" ''
+            # The work directory is used by the runner to check out the source code and run the job.
+            # We need to ensure that it exists and is writable by the runner user.
+            # Since the runner user is dynamic, we need to chown the directory to the current user.
+            mkdir -p ${escapeShellArg cfg.workDir}
+            chown ${escapeShellArg (if cfg.user != null then cfg.user else svcName)} ${escapeShellArg cfg.workDir}
+            chmod 700 ${escapeShellArg cfg.workDir}
+          '';
         in
         map
           (
@@ -248,6 +258,7 @@ in
           )
           (
             builtins.filter (x: x != "") [
+              (optionalString (cfg.workDir != null) "+${setupWorkDir}") # runs as root
               (optionalString (!isNull cfg.githubApp) "+${unconfigureRunnerGitHubApp}") # runs as root
               (optionalString (isNull cfg.githubApp) "+${unconfigureRunner}") # runs as root
               configureRunner
@@ -342,6 +353,8 @@ in
         "AF_UNIX"
         "AF_NETLINK"
       ];
+
+      ReadWritePaths = lib.optional (cfg.workDir != null) "-${cfg.workDir}";
 
       # Needs network access
       PrivateNetwork = false;
